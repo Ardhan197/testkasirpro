@@ -9,6 +9,9 @@
     <!-- Menggunakan Playfair Display untuk kesan klasik/mewah dan Inter untuk keterbacaan -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
     
+    <!-- Tambahan Library html2canvas untuk mengubah HTML struk menjadi Gambar -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
     <script>
         tailwind.config = {
             theme: {
@@ -848,7 +851,7 @@
 
         const addToCart = (product) => {
             const existingItem = cart.find(item => item.id === product.id);
-            let isNewItem = false; // Menyimpan status apakah ini item yang benar-benar baru masuk
+            let isNewItem = false; 
             
             if (existingItem) {
                 if (existingItem.quantity < product.stock) {
@@ -860,7 +863,7 @@
             } else {
                 if(product.stock > 0) {
                     cart.push({ ...product, quantity: 1 });
-                    isNewItem = true; // Tandai bahwa ada baris baru
+                    isNewItem = true; 
                 } else {
                     showToast('Maaf, stok habis.', 'error');
                     return;
@@ -875,7 +878,6 @@
 
             // Logika auto-scroll ke bawah saat menu baru ditambahkan
             if (isNewItem) {
-                // Timeout digunakan agar menunggu elemen li selesai dirender DOM
                 setTimeout(() => {
                     const cartContainer = document.getElementById('cartItemsContainer');
                     if(cartContainer) {
@@ -1148,7 +1150,8 @@
             }, 400);
         };
 
-        const sendWhatsAppReceipt = () => {
+        // --- FUNGSI BARU: KIRIM GAMBAR STRUK VIA WA ---
+        const sendWhatsAppReceipt = async () => {
             if (!currentReceiptTx) return;
             
             const waInput = document.getElementById('waNumberInput');
@@ -1171,27 +1174,58 @@
                 phone = '62' + phone;
             }
 
-            const tx = currentReceiptTx;
-            const date = new Date(tx.date);
-            
-            let text = `*LuxePOS - Struk Transaksi*\n`;
-            text += `No. Bill: ${tx.id}\n`;
-            text += `Tanggal: ${date.toLocaleDateString('id-ID')} ${date.toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'})}\n\n`;
-            text += `*Pesanan:*\n`;
-            tx.items.forEach(item => {
-                text += `- ${item.name} x${item.quantity}\n  ${formatRupiah(item.price * item.quantity)}\n`;
-            });
-            text += `\nSubtotal: ${formatRupiah(tx.subtotal)}\n`;
-            text += `Svc & Tax (15%): ${formatRupiah(tx.tax)}\n`;
-            text += `*TOTAL: ${formatRupiah(tx.total)}*\n\n`;
-            text += `Tunai Diterima: ${formatRupiah(tx.received)}\n`;
-            text += `Kembali: ${formatRupiah(tx.change)}\n\n`;
-            text += `*Terima Kasih*\nMomen Spesial Anda adalah Prioritas Kami.`;
+            const btnWa = document.getElementById('btnWaReceipt');
+            const originalIcon = btnWa.innerHTML;
+            btnWa.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>'; // Loading icon
 
-            const encodedText = encodeURIComponent(text);
-            
-            // Langsung melompat ke chat dengan nomor tujuan dan pesan terisi
-            window.open(`https://wa.me/${phone}?text=${encodedText}`, '_blank');
+            try {
+                // Proses render DOM ke Canvas
+                const receiptEl = document.getElementById('printReceiptArea');
+                const canvas = await html2canvas(receiptEl, {
+                    scale: 2, // Kualitas gambar lebih tinggi
+                    backgroundColor: '#ffffff'
+                });
+
+                canvas.toBlob(async (blob) => {
+                    if(!blob) throw new Error("Gagal membuat blob gambar");
+                    
+                    // 1. Opsi Download (Otomatis unduh gambar agar pengguna bisa attach di WA)
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `Struk_LuxePOS_${currentReceiptTx.id}.png`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+
+                    // 2. Opsi Clipboard (Coba salin gambar ke clipboard jika didukung)
+                    try {
+                        const item = new ClipboardItem({ "image/png": blob });
+                        await navigator.clipboard.write([item]);
+                        showToast('Struk disalin & diunduh! Silakan "Paste" di chat WA.', 'success');
+                    } catch (err) {
+                        showToast('Struk berhasil diunduh. Silakan lampirkan foto di WA.', 'success');
+                    }
+
+                    // 3. Buka WhatsApp tujuan (Hanya teks pendamping, user harus attach gambar yang tadi diunduh/copy)
+                    const text = `Halo, berikut adalah struk transaksi Anda di *LuxePOS* (Bill: ${currentReceiptTx.id}).\n\n*(Mohon lampirkan gambar struk yang baru saja diunduh/disalin dari aplikasi)* 🙏`;
+                    const encodedText = encodeURIComponent(text);
+                    
+                    // Buka WhatsApp di tab baru
+                    setTimeout(() => {
+                        window.open(`https://wa.me/${phone}?text=${encodedText}`, '_blank');
+                    }, 500); // Beri jeda sedikit agar toast sempat terbaca
+
+                    // Kembalikan tombol ke kondisi semula
+                    btnWa.innerHTML = originalIcon;
+                }, 'image/png');
+
+            } catch (error) {
+                console.error("Gagal memproses gambar struk:", error);
+                showToast('Gagal memproses gambar struk.', 'error');
+                btnWa.innerHTML = originalIcon;
+            }
         };
 
         const processPayment = () => {
