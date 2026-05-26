@@ -126,14 +126,6 @@
             text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
         }
 
-        /* Desktop closed sidebar adjustment */
-        @media (min-width: 768px) {
-            #leftSidebar.desktop-closed {
-                margin-left: -200px; /* Hide by pulling left */
-                transform: translateX(0); /* Override translate to use margin instead */
-            }
-        }
-
         /* Styles specifically for Printing the Receipt */
         @media print {
             @page { margin: 0; }
@@ -183,11 +175,10 @@
 <body class="h-screen overflow-hidden flex flex-col md:flex-row antialiased selection:bg-gold-500 selection:text-surface-400 text-xs">
 
     <!-- Sidebar Backdrop -->
-    <div id="sidebarBackdrop" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 hidden transition-opacity opacity-0 duration-300 md:hidden"></div>
+    <div id="sidebarBackdrop" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 hidden transition-opacity opacity-0 duration-300"></div>
 
     <!-- Sidebar -->
-    <!-- Added desktop-closed class to start hidden on desktop too -->
-    <aside id="leftSidebar" class="w-[200px] bg-surface-200 border-r border-white/5 flex flex-col justify-between fixed inset-y-0 left-0 z-50 transform -translate-x-full md:relative md:translate-x-0 md:z-10 transition-all duration-300 shadow-[20px_0_40px_rgba(0,0,0,0.5)] desktop-closed">
+    <aside id="leftSidebar" class="w-[200px] bg-surface-200 border-r border-white/5 flex flex-col justify-between fixed inset-y-0 left-0 z-50 transform -translate-x-full transition-transform duration-300 shadow-[20px_0_40px_rgba(0,0,0,0.5)]">
         <div>
             <!-- Logo -->
             <div class="h-16 flex items-center justify-between px-5 border-b border-white/5">
@@ -197,7 +188,7 @@
                     </div>
                     <h1 class="ml-3 font-serif font-bold text-base text-white tracking-widest uppercase">Luxe<span class="text-gold-500">POS</span></h1>
                 </div>
-                <button id="closeSidebarBtn" class="text-gray-500 hover:text-white transition-colors md:hidden">
+                <button id="closeSidebarBtn" class="text-gray-500 hover:text-white transition-colors">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
@@ -634,8 +625,7 @@
         let isViewingHistoryReceipt = false; // Flag for viewing past receipt
 
         // Variables for sidebar state tracking
-        let isMobileSidebarOpen = false;
-        let isDesktopSidebarOpen = false; // Initial state is closed 
+        let isSidebarOpen = false; 
 
         // --- DOM ELEMENTS ---
         const productsGrid = document.getElementById('productsGrid');
@@ -1318,10 +1308,8 @@
                 renderHistory();
             }
             
-            // Tutup sidebar setelah menu dipilih (berlaku untuk Mobile dan Desktop)
-            if(window.innerWidth < 768 && isMobileSidebarOpen) {
-                toggleSidebar();
-            } else if (window.innerWidth >= 768 && isDesktopSidebarOpen) {
+            // Tutup sidebar setelah menu dipilih (berlaku untuk semua layar)
+            if(isSidebarOpen) {
                 toggleSidebar();
             }
         };
@@ -1446,28 +1434,17 @@
         const sidebarBackdrop = document.getElementById('sidebarBackdrop');
 
         const toggleSidebar = () => {
-            if (window.innerWidth < 768) {
-                // Mobile behavior
-                isMobileSidebarOpen = !isMobileSidebarOpen;
-                if (isMobileSidebarOpen) {
-                    sidebarBackdrop.classList.remove('hidden');
-                    setTimeout(() => sidebarBackdrop.classList.replace('opacity-0', 'opacity-100'), 10);
-                    leftSidebar.classList.remove('-translate-x-full');
-                    leftSidebar.classList.add('translate-x-0');
-                } else {
-                    sidebarBackdrop.classList.replace('opacity-100', 'opacity-0');
-                    leftSidebar.classList.remove('translate-x-0');
-                    leftSidebar.classList.add('-translate-x-full');
-                    setTimeout(() => sidebarBackdrop.classList.add('hidden'), 300);
-                }
+            isSidebarOpen = !isSidebarOpen;
+            if (isSidebarOpen) {
+                sidebarBackdrop.classList.remove('hidden');
+                setTimeout(() => sidebarBackdrop.classList.replace('opacity-0', 'opacity-100'), 10);
+                leftSidebar.classList.remove('-translate-x-full');
+                leftSidebar.classList.add('translate-x-0');
             } else {
-                // Desktop behavior
-                isDesktopSidebarOpen = !isDesktopSidebarOpen;
-                if (isDesktopSidebarOpen) {
-                    leftSidebar.classList.remove('desktop-closed');
-                } else {
-                    leftSidebar.classList.add('desktop-closed');
-                }
+                sidebarBackdrop.classList.replace('opacity-100', 'opacity-0');
+                leftSidebar.classList.remove('translate-x-0');
+                leftSidebar.classList.add('-translate-x-full');
+                setTimeout(() => sidebarBackdrop.classList.add('hidden'), 300);
             }
         };
 
