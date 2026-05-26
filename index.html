@@ -257,12 +257,16 @@
                 </div>
             </div>
             
-            <div class="hidden sm:flex items-center gap-4 ml-4 border-l border-white/10 pl-4">
+            <div class="hidden sm:flex items-center gap-2 ml-4 border-l border-white/10 pl-4">
                 <!-- Clock -->
-                <div class="text-right">
+                <div class="text-right mr-2">
                     <p class="text-[10px] font-medium text-gray-300 tracking-wide" id="currentDate">Senin, 24 Mei</p>
                     <p class="text-[9px] text-gold-500 font-serif italic" id="currentTime">10:30 AM</p>
                 </div>
+                <!-- Fullscreen Button -->
+                <button id="fullscreenBtn" class="text-gray-400 hover:text-gold-500 transition-colors w-8 h-8 rounded-full hover:bg-white/5 flex items-center justify-center" title="Layar Penuh">
+                    <i class="fa-solid fa-expand text-sm"></i>
+                </button>
             </div>
         </header>
 
@@ -674,6 +678,9 @@
         const categoryListTable = document.getElementById('categoryListTable');
         const categoryContainer = document.getElementById('categoryContainer');
         const menuCategorySelect = document.getElementById('menuCategory');
+
+        // Fullscreen Elements
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
 
         // --- HELPER FUNCTIONS ---
         const formatRupiah = (number) => {
@@ -1430,10 +1437,39 @@
             }
         };
 
+        // Fullscreen Toggle Logic
+        const toggleFullScreen = () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    showToast('Gagal masuk mode layar penuh', 'error');
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        };
+
         // Event Listeners
         document.getElementById('toggleSidebarBtn').addEventListener('click', toggleSidebar);
         document.getElementById('closeSidebarBtn').addEventListener('click', toggleSidebar);
         sidebarBackdrop.addEventListener('click', toggleSidebar);
+
+        if (fullscreenBtn) {
+            fullscreenBtn.addEventListener('click', toggleFullScreen);
+            document.addEventListener('fullscreenchange', () => {
+                const icon = fullscreenBtn.querySelector('i');
+                if (document.fullscreenElement) {
+                    icon.classList.remove('fa-expand');
+                    icon.classList.add('fa-compress');
+                    fullscreenBtn.title = "Keluar Layar Penuh";
+                } else {
+                    icon.classList.remove('fa-compress');
+                    icon.classList.add('fa-expand');
+                    fullscreenBtn.title = "Layar Penuh";
+                }
+            });
+        }
 
         searchInput.addEventListener('input', (e) => {
             searchQuery = e.target.value;
